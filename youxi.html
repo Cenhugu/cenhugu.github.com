@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<canvas id="canvas" width="400" height="600"></canvas>
+<script>
+    var i = 0;//三只鸟的图片轮流的变量 i%3
+    var birds = ["images/0.gif","images/1.gif","images/2.gif"];
+    var jianju = 200;
+    var isSorce = false;
+    var velocity = 0;
+    var score = 0;
+
+    //-----------------------------------地面背景------------------------------------------------
+
+    var ground = new Background("images/ground.png", 0, 550, 400, 200); //地面
+    function Background(imgSrc, x, y, width, height){
+        this.bgx =x;
+        this.bgy =y;
+        this.bgwidth = width;
+        this.bgheight = height;
+        var bgImages = new Image(); //图片对象
+        bgImages.src = imgSrc;
+
+        this.draw = function(){
+
+            canvas.drawImage(bgImages, this.bgx, this.bgy, this.bgwidth, this.bgheight);
+        }
+    }
+
+    //------------------------------------会动的小鸟--------------------------------------------
+    function Bird(imgSrc, x, y, width, height){
+        this.bimgSrc = imgSrc;
+        this.bx = x;
+        this.by = y;
+        this.bwidth = width;
+        this.bheight = height;
+        this.draw = flyBird;
+    }
+
+    var bird = new Bird(birds, 80, 300, 40, 40);
+    function flyBird(){
+        i++;
+        //console.log(i + ' ' +this.bimgSrc);
+        var birds = new Image();
+        birds.src = this.bimgSrc[i%3];
+        //console.log(birds.src);
+        canvas.drawImage(birds, bird.bx, bird.by, bird.bwidth, bird.bheight);
+
+    }
+
+
+    //----------------------------------这里是上管道---------------------------------------------
+
+    function UpPipe(imgSrc, x, y, width, height){
+        this.px = x;
+        this.py = y;
+        this.pwidth = width;
+        this.pheight = height;
+        this.draw = drawUpPipe;
+        this.imgSrc = imgSrc;
+    }
+    var upPipe = new UpPipe("images/pipe.png", 0, 0, 100, 200);//上管道
+    //img, 150, 500, 150, 800, upPipeX, 0, 100, 200
+    function drawUpPipe(){
+        var upImages = new Image();
+        upImages.src = this.imgSrc;
+        canvas.drawImage(upImages, 150, 500, 150, 800, upPipe.px, upPipe.py, upPipe.pwidth, upPipe.pheight);
+    }
+
+    //---------------------------------这里是下管道----------------------------------
+
+    function DownPipe(imgSrc, x, y, width, height){
+        this.dx = x;
+        this.dy = y;
+        this.dwidth = width;
+        this.dheight = height;
+        this.imgSrc = imgSrc;
+        this.draw = drawDownPipe;
+    }
+
+    var downPipe = new DownPipe("images/pipe.png", 0, 400, 100, 200);//下管道
+
+    function drawDownPipe(){
+        var downImages = new Image();
+        downImages.src = this.imgSrc;
+
+        canvas.drawImage(downImages, 0, 500, 150, 500, downPipe.dx, downPipe.dy, downPipe.dwidth, downPipe.dheight);
+    }
+
+    //----------------------------上下管道移动随机长度-------------------------------
+    function Move(){
+        if(upPipe.px + upPipe.pwidth > 0){
+
+            upPipe.px = upPipe.px - 20;
+            downPipe.dx = downPipe.dx - 20;
+        }else{
+
+            upPipe.px = 400;
+            downPipe.dx = 400;
+
+            upPipe.pheight = 100 + 200 * Math.random();
+            //100~300随机数
+            downPipe.dy = upPipe.pheight + jianju;
+            downPipe.dheight = 600 - downPipe.dy;
+            isSorce = true;
+        }
+    }
+
+    //-----------------------------小鸟下降--------------------------
+
+    var v1 = 10;
+    var v2;
+    var a = 2;
+    var s = 0;
+    function autoAdd(){
+        v2 = v1 + a;
+
+        s =  (v1 + v2) / 2;
+        bird.by += s;
+    }
+    //-------------------点击小鸟上升----------------------------------
+
+    window.onkeydown = function(event){
+        var e = event || window.event;
+        if(e.keyCode == 32){
+            bird.by -= 80;
+        }
+    }
+
+    //-----------------------------碰撞事件计分----------------------------
+    //1.鸟的bx+bwidth > 上管道的px  2.鸟的bx < 上管道的px+pwidth  3.by<上管道的py + pheight
+    //5.鸟的bx+bwidth > 下管道的dx  6.鸟的bx < 下管道的dx+dwidth  7.by + bheight >下管道的dy
+    //碰到地面  by + bheight> bgy
+    //碰到天上 by<0
+
+    function peng(){
+        if(bird.by + bird.bheight> ground.bgy
+        ||((bird.bx + bird.bwidth > upPipe.px) && (bird.bx < upPipe.px + upPipe.pwidth) && (bird.by < upPipe.py + upPipe.pheight))
+        ||((bird.bx + bird.bwidth > downPipe.dx) && (bird.bx < downPipe.dx + downPipe.dwidth) && (bird.by +bird.bheight > downPipe.dy))
+        ||bird.by < 0){
+            clearInterval(tid);
+            var a = "game over";
+
+            canvas.fillStyle = "rgb(255,255,255)";
+            canvas.font = "20px Accent";
+            canvas.fillText(a + "   score is:"+score, 100, 110);
+//            canvas.fillText("score is:"+score,110,100);
+
+            return;
+        }
+        Move();
+        autoAdd();
+
+    }
+
+    //-------------------------------计分---------------------------
+
+    function calculater(){
+        if (isSorce && bird.bx > upPipe.px + upPipe.pwidth) {
+
+            score++;
+            isSorce = false;
+
+            if (score>0 && score%10 == 0) {
+
+                velocity++; //成绩每过10分就加速一次
+            }
+
+        }
+    }
+
+
+    //-----------------------------总的背景--------------------------
+    //var back = new Background("images/bg.png", 0, 0, 400, 600);//背景
+
+    var beiImages = new Image();
+    beiImages.src = "images/bg.png";
+
+    function drawBeiJing(){
+
+        canvas.drawImage(beiImages, 0, 0, 400, 600);
+    }
+    var canvas = document.getElementById("canvas").getContext("2d");
+
+
+
+    function drawwall(){
+        // 清除画布
+        canvas.clearRect(0,0,400,600);
+        drawBeiJing();
+        //  (3)绘制  对象调用方法
+        //back.draw();  //绘制背景
+        downPipe.draw();//绘制下管道
+        ground.draw();// 绘制地面
+        upPipe.draw();//绘制上管道
+        bird.draw();//绘制小鸟
+
+        peng();
+        // 计算
+        calculater();
+
+
+    }
+    var tid=setInterval(drawwall,100);
+
+
+
+
+
+
+</script>
+</body>
+</html>
